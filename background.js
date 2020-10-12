@@ -13,37 +13,40 @@ function onRemoved(tabId, removeInfo) {
 	}
 }
 
-async function updateMuteState() {
-	let tabs = await browser.tabs.query({active: true, currentWindow: true});
-	const aid = tabs[0].id;
-	tabs = await browser.tabs.query({});
-	tabs.forEach( (tab) => {
-		if( unmanaged.has(tab.id) ) {
-			setPageAction(tab.id,'icon-locked.png', 'enable unfocus mute');
-		}else{
-			setPageAction(tab.id,'icon.png', 'disable unfocus mute');
-			// mute all managed, except the active tab
-			browser.tabs.update(tab.id, {muted: (tab.id !== aid)}); 
-		}
+function updateMuteState() {
+	browser.tabs.query({active: true, currentWindow: true}, function(tabs) {
+		const aid = tabs[0].id;
+		browser.tabs.query({},function(tabs) {
+			tabs.forEach( (tab) => {
+				if( unmanaged.has(tab.id) ) {
+					setPageAction(tab.id,'icon-locked.png', 'enable unfocus mute');
+				}else{
+					setPageAction(tab.id,'icon.png', 'disable unfocus mute');
+					// mute all managed, except the active tab
+					browser.tabs.update(tab.id, {muted: (tab.id !== aid)}); 
+				}
+			});
+		});
 	});
 }
 
-async function onClicked(){
-	let tabs = await browser.tabs.query({active: true, currentWindow: true}); 
-	const aid = tabs[0].id;
-	if( unmanaged.has(aid) ){
-		unmanaged.delete(aid);
-		setPageAction(aid,'icon.png', 'disable unfocus mute');
-	}else{
-		unmanaged.add(aid);
-		setPageAction(aid,'icon-locked.png', 'enable unfocus mute');
-	}
+function onClicked(){
+	browser.tabs.query({active: true, currentWindow: true}, function(tabs) {
+		const aid = tabs[0].id;
+		if( unmanaged.has(aid) ){
+			unmanaged.delete(aid);
+			setPageAction(aid,'icon.png', 'disable unfocus mute');
+		}else{
+			unmanaged.add(aid);
+			setPageAction(aid,'icon-locked.png', 'enable unfocus mute');
+		}
+	});
 }
 
 // add listeners
 browser.browserAction.onClicked.addListener(onClicked);
 browser.tabs.onRemoved.addListener(onRemoved);
 browser.tabs.onActivated.addListener(updateMuteState); 
-browser.tabs.onUpdated.addListener(updateMuteState,{properties:['status']}); 
+browser.tabs.onUpdated.addListener(updateMuteState); 
 browser.windows.onFocusChanged.addListener(updateMuteState);
 browser.runtime.onInstalled.addListener(updateMuteState); 
